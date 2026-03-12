@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Career Advisor for Students</title>
+  <meta name="description" content="Get personalized career recommendations, salary estimates, skills to learn, and a 6-month learning roadmap powered by AI.">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <span class="logo-icon">🎯</span>
+        <div>
+          <h1>CareerLens AI</h1>
+          <p class="tagline">Discover your perfect career path</p>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Action Panel — Input Form -->
+      <section class="action-panel" id="action-panel">
+        <div class="card">
+          <h2>Tell Us About Yourself</h2>
+          <p class="card-subtitle">Fill in the fields below and let AI map out your ideal career.</p>
+
+          <!-- Skills -->
+          <div class="input-group">
+            <label for="skills-input">
+              <span class="label-icon">⚡</span> Your Skills
+            </label>
+            <div class="tag-input-wrapper">
+              <div class="tags-display" id="skills-tags"></div>
+              <form class="tag-form" id="skills-form">
+                <input type="text" id="skills-input" placeholder="e.g. Python, Excel, Public Speaking">
+                <button type="submit" class="add-btn" aria-label="Add skill">+</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Interests -->
+          <div class="input-group">
+            <label for="interests-input">
+              <span class="label-icon">💡</span> Your Interests
+            </label>
+            <div class="tag-input-wrapper">
+              <div class="tags-display" id="interests-tags"></div>
+              <form class="tag-form" id="interests-form">
+                <input type="text" id="interests-input" placeholder="e.g. AI, Finance, Design">
+                <button type="submit" class="add-btn" aria-label="Add interest">+</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Courses -->
+          <div class="input-group">
+            <label for="courses-input">
+              <span class="label-icon">📚</span> Courses Studied
+            </label>
+            <div class="tag-input-wrapper">
+              <div class="tags-display" id="courses-tags"></div>
+              <form class="tag-form" id="courses-form">
+                <input type="text" id="courses-input" placeholder="e.g. Data Structures, Marketing 101">
+                <button type="submit" class="add-btn" aria-label="Add course">+</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Personality Type -->
+          <div class="input-group">
+            <label for="personality-select">
+              <span class="label-icon">🧠</span> Personality Type
+            </label>
+            <select id="personality-select">
+              <option value="" disabled selected>Select your personality type</option>
+              <option value="Analytical">🔍 Analytical — Data-driven problem solver</option>
+              <option value="Creative">🎨 Creative — Imaginative and expressive</option>
+              <option value="Leader">👑 Leader — Decisive and inspiring</option>
+              <option value="Helper">🤝 Helper — Empathetic and supportive</option>
+              <option value="Innovator">🚀 Innovator — Forward-thinking disruptor</option>
+              <option value="Organizer">📋 Organizer — Detail-oriented planner</option>
+            </select>
+          </div>
+
+          <button class="generate-btn" id="generate-btn" type="button" disabled>
+            <span class="btn-icon">✨</span> Generate Career Report
+          </button>
+        </div>
+      </section>
+
+      <!-- Loading Panel -->
+      <section class="loading-panel" id="loading-panel">
+        <div class="loader-card">
+          <div class="spinner"></div>
+          <p id="loading-message">Analyzing your profile...</p>
+          <p class="loading-sub">Our AI is crafting your personalized career roadmap</p>
+        </div>
+      </section>
+
+      <!-- Output Panel -->
+      <section class="output-panel" id="output-panel">
+        <div class="report-card" id="report-content">
+          <!-- AI report rendered here -->
+        </div>
+        <button class="start-over-btn" id="start-over-btn" type="button">
+          ↩ Start Over
+        </button>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 CareerLens AI — Powered by Google Gemini. For educational guidance only.</p>
+    </footer>
+  </div>
+
+  <script src="index.js" type="module"></script>
+</body>
+
+</html>
