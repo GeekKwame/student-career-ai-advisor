@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import DOMPurify from 'https://esm.sh/dompurify@3.2.4'
 
 // ===== State =====
 const state = {
@@ -13,13 +13,16 @@ const actionPanel   = document.getElementById('action-panel')
 const loadingPanel  = document.getElementById('loading-panel')
 const outputPanel   = document.getElementById('output-panel')
 const loadingMsg    = document.getElementById('loading-message')
+const loadingSub    = document.getElementById('loading-sub')
 const generateBtn   = document.getElementById('generate-btn')
 const startOverBtn  = document.getElementById('start-over-btn')
+const downloadBtn   = document.getElementById('download-btn')
 const personalityEl = document.getElementById('personality-select')
 const reportContent = document.getElementById('report-content')
+const historySection = document.getElementById('history-section')
+const historyList    = document.getElementById('history-list')
 
 // ===== Tag System =====
-// Each category: { formId, inputId, tagsDisplayId, stateKey }
 const categories = [
   { formId: 'skills-form',    inputId: 'skills-input',    tagsId: 'skills-tags',    key: 'skills' },
   { formId: 'interests-form', inputId: 'interests-input', tagsId: 'interests-tags', key: 'interests' },
@@ -50,22 +53,23 @@ function renderTags(stateKey, tagsContainerId) {
   state[stateKey].forEach((item, index) => {
     const tag = document.createElement('span')
     tag.className = 'tag'
-    tag.innerHTML = `${escapeHTML(item)} <button class="remove-tag" aria-label="Remove ${escapeHTML(item)}">&times;</button>`
 
-    tag.querySelector('.remove-tag').addEventListener('click', () => {
+    const text = document.createTextNode(item + ' ')
+    tag.appendChild(text)
+
+    const removeBtn = document.createElement('button')
+    removeBtn.className = 'remove-tag'
+    removeBtn.setAttribute('aria-label', `Remove ${item}`)
+    removeBtn.textContent = '×'
+    removeBtn.addEventListener('click', () => {
       state[stateKey].splice(index, 1)
       renderTags(stateKey, tagsContainerId)
       validateForm()
     })
 
+    tag.appendChild(removeBtn)
     container.appendChild(tag)
   })
-}
-
-function escapeHTML(str) {
-  const div = document.createElement('div')
-  div.textContent = str
-  return div.innerHTML
 }
 
 // ===== Personality Select =====
@@ -92,53 +96,6 @@ function clearError(group) {
   if (existing) existing.remove()
 }
 
-// ===== Generate Report =====
-generateBtn.addEventListener('click', generateReport)
-startOverBtn.addEventListener('click', startOver)
-
-async function generateReport() {
-  // Validate one more time and show errors
-  let hasError = false
-
-  if (state.skills.length === 0) {
-    showError('skills-input', 'Add at least one skill')
-    hasError = true
-  }
-  if (state.interests.length === 0) {
-    showError('interests-input', 'Add at least one interest')
-    hasError = true
-  }
-  if (state.courses.length === 0) {
-    showError('courses-input', 'Add at least one course')
-    hasError = true
-  }
-  if (!state.personality) {
-    showError('personality-select', 'Select your personality type')
-    hasError = true
-  }
-
-  if (hasError) return
-
-  // Switch to loading panel
-  actionPanel.style.display = 'none'
-  loadingPanel.style.display = 'flex'
-
-  loadingMsg.textContent = 'Analyzing your profile...'
-
-  try {
-    await fetchCareerReport()
-  } catch (err) {
-    console.error('Error generating report:', err)
-    loadingPanel.style.display = 'none'
-    outputPanel.style.display = 'flex'
-    reportContent.innerHTML = `
-      <h2 style="color: #fca5a5;">⚠️ Something went wrong</h2>
-      <p>Unable to generate your career report. Please check your internet connection and try again.</p>
-      <p style="font-size: 0.8rem; color: var(--text-muted);">Error: ${escapeHTML(err.message)}</p>
-    `
-  }
-}
-
 function showError(inputId, message) {
   const group = document.getElementById(inputId).closest('.input-group')
   group.classList.add('error')
@@ -150,76 +107,146 @@ function showError(inputId, message) {
   }
 }
 
-// ===== Gemini API =====
-async function fetchCareerReport() {
-  const prompt = buildPrompt()
+// ===== Rotating Loading Messages =====
+const LOADING_MESSAGES = [
+  { main: 'Analyzing your profile...', sub: 'Reviewing your skills and interests' },
+  { main: 'Researching career paths...', sub: 'Matching your profile to job markets' },
+  { main: 'Estimating salaries...', sub: 'Pulling compensation data for top roles' },
+  { main: 'Building your roadmap...', sub: 'Designing a 6-month learning plan' },
+  { main: 'Almost there...', sub: 'Putting the finishing touches on your report' },
+]
 
-  loadingMsg.textContent = 'Crafting your career roadmap...'
+let loadingInterval = null
+let messageIndex = 0
 
-  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY)
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: {
-      parts: [{ text: SYSTEM_PROMPT }]
-    }
-  })
-
-  const chat  = model.startChat()
-  const result = await chat.sendMessage(prompt)
-  const text   = result.response.text()
-
-  renderReport(text)
+function startLoadingMessages() {
+  messageIndex = 0
+  updateLoadingMessage()
+  loadingInterval = setInterval(() => {
+    messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length
+    updateLoadingMessage()
+  }, 3000)
 }
 
-const SYSTEM_PROMPT = `You are an expert career counselor and job market analyst. Your task is to analyze a student's profile and provide detailed, actionable career guidance.
+function stopLoadingMessages() {
+  if (loadingInterval) {
+    clearInterval(loadingInterval)
+    loadingInterval = null
+  }
+}
 
-Respond ONLY in pure HTML. Do NOT wrap the response in markdown code blocks like \`\`\`html. 
+function updateLoadingMessage() {
+  const msg = LOADING_MESSAGES[messageIndex]
+  loadingMsg.textContent = msg.main
+  loadingSub.textContent = msg.sub
+}
 
-Use semantic HTML tags to structure the report beautifully:
-- <h2> for section headings (e.g. "🎯 Top Career Paths", "💰 Salary Estimates", "📈 Job Market Demand", "🗺️ 6-Month Learning Roadmap")
-- <h3> for sub-headings (career path names)
-- <p>, <strong>, <em> for body text
-- <table>, <thead>, <tbody>, <tr>, <th>, <td> for salary/demand data
-- <ul>/<ol> and <li> for lists
-- <hr> to separate major sections
+// ===== Generate Report =====
+generateBtn.addEventListener('click', generateReport)
+startOverBtn.addEventListener('click', startOver)
+downloadBtn.addEventListener('click', downloadPDF)
 
-The report MUST include ALL of the following sections:
+async function generateReport() {
+  // Validate
+  let hasError = false
+  if (state.skills.length === 0) { showError('skills-input', 'Add at least one skill'); hasError = true }
+  if (state.interests.length === 0) { showError('interests-input', 'Add at least one interest'); hasError = true }
+  if (state.courses.length === 0) { showError('courses-input', 'Add at least one course'); hasError = true }
+  if (!state.personality) { showError('personality-select', 'Select your personality type'); hasError = true }
+  if (hasError) return
 
-1. **Top 3 Career Paths** — with a brief description of why each is a good fit
-2. **Salary Estimates** — expected entry-level and mid-career salaries for each path (in a table)
-3. **Skills to Develop** — specific technical and soft skills the student should learn, tied to each career path
-4. **Job Market Demand** — current and projected demand for each career path (High / Medium / Low with brief explanation)
-5. **6-Month Learning Roadmap** — a detailed, month-by-month plan with specific courses, projects, and milestones to pursue
+  // Switch to loading
+  actionPanel.style.display = 'none'
+  loadingPanel.style.display = 'flex'
+  startLoadingMessages()
 
-Make the report encouraging, specific, and actionable. Reference the student's actual skills and interests throughout. Use emojis sparingly to make it visually engaging.`
+  // Timeout controller (45 seconds)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 45000)
 
-function buildPrompt() {
-  return `Here is my student profile:
+  try {
+    const response = await fetch('/api/career-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        skills: state.skills,
+        interests: state.interests,
+        courses: state.courses,
+        personality: state.personality
+      }),
+      signal: controller.signal
+    })
 
-**Skills:** ${state.skills.join(', ')}
-**Interests:** ${state.interests.join(', ')}
-**Courses Studied:** ${state.courses.join(', ')}
-**Personality Type:** ${state.personality}
+    clearTimeout(timeout)
 
-Please analyze my profile and generate a comprehensive career advisory report.`
+    if (response.status === 429) {
+      throw new Error('You\'ve made too many requests. Please wait 15 minutes and try again.')
+    }
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}))
+      throw new Error(errData.error || 'Server error. Please try again.')
+    }
+
+    const data = await response.json()
+
+    // Sanitize the HTML output with DOMPurify
+    const cleanHTML = DOMPurify.sanitize(data.report, {
+      ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','strong','em','b','i','u','br','hr',
+                     'ul','ol','li','table','thead','tbody','tr','th','td','span','div','a','blockquote'],
+      ALLOWED_ATTR: ['href','target','class','style']
+    })
+
+    renderReport(cleanHTML)
+    saveToHistory(cleanHTML)
+  } catch (err) {
+    clearTimeout(timeout)
+    stopLoadingMessages()
+
+    const isTimeout = err.name === 'AbortError'
+    const errorMsg = isTimeout
+      ? 'The request timed out. The AI is taking too long — please try again.'
+      : err.message
+
+    loadingPanel.style.display = 'none'
+    outputPanel.style.display = 'flex'
+    reportContent.innerHTML = `
+      <div class="error-report">
+        <h2>Something went wrong</h2>
+        <p>${DOMPurify.sanitize(errorMsg)}</p>
+        <button class="retry-btn" id="retry-btn" type="button">Try Again</button>
+      </div>
+    `
+    document.getElementById('retry-btn').addEventListener('click', retryReport)
+  }
+}
+
+function retryReport() {
+  outputPanel.style.display = 'none'
+  reportContent.innerHTML = ''
+  generateReport()
 }
 
 // ===== Render Report =====
 function renderReport(htmlContent) {
+  stopLoadingMessages()
   loadingPanel.style.display = 'none'
-  outputPanel.style.display  = 'flex'
-  reportContent.innerHTML    = htmlContent
+  outputPanel.style.display = 'flex'
+  reportContent.innerHTML = htmlContent
+}
+
+// ===== Download PDF =====
+function downloadPDF() {
+  window.print()
 }
 
 // ===== Start Over =====
 function startOver() {
-  // Reset state
-  state.skills    = []
+  state.skills = []
   state.interests = []
-  state.courses   = []
+  state.courses = []
   state.personality = ''
 
-  // Reset UI
   personalityEl.value = ''
   generateBtn.disabled = true
 
@@ -228,17 +255,98 @@ function startOver() {
     document.getElementById(cat.inputId).value = ''
   })
 
-  // Clear any errors
   document.querySelectorAll('.input-group').forEach(g => {
     g.classList.remove('error')
     const msg = g.querySelector('.error-msg')
     if (msg) msg.remove()
   })
 
-  // Switch panels
-  outputPanel.style.display  = 'none'
+  outputPanel.style.display = 'none'
   loadingPanel.style.display = 'none'
-  actionPanel.style.display  = 'block'
-
+  actionPanel.style.display = 'block'
   reportContent.innerHTML = ''
 }
+
+// ===== Report History (localStorage) =====
+const HISTORY_KEY = 'careerlens_history'
+
+function saveToHistory(reportHTML) {
+  const history = getHistory()
+  const entry = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    skills: [...state.skills],
+    interests: [...state.interests],
+    personality: state.personality,
+    report: reportHTML
+  }
+
+  history.unshift(entry)
+  // Keep only the last 10 reports
+  if (history.length > 10) history.pop()
+
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+  } catch (e) {
+    // localStorage might be full — silently fail
+    console.warn('Could not save to history:', e.message)
+  }
+
+  renderHistory()
+}
+
+function getHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []
+  } catch {
+    return []
+  }
+}
+
+function renderHistory() {
+  const history = getHistory()
+
+  if (history.length === 0) {
+    historySection.style.display = 'none'
+    return
+  }
+
+  historySection.style.display = 'block'
+  historyList.innerHTML = ''
+
+  history.forEach((entry) => {
+    const li = document.createElement('li')
+    li.className = 'history-item'
+
+    const label = document.createElement('button')
+    label.className = 'history-btn'
+    label.innerHTML = `<span class="history-date">${entry.date}</span><span class="history-tags">${entry.skills.slice(0, 3).join(', ')}${entry.skills.length > 3 ? '…' : ''}</span>`
+
+    label.addEventListener('click', () => {
+      actionPanel.style.display = 'none'
+      renderReport(entry.report)
+    })
+
+    const deleteBtn = document.createElement('button')
+    deleteBtn.className = 'history-delete'
+    deleteBtn.textContent = '×'
+    deleteBtn.setAttribute('aria-label', 'Delete report')
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      removeFromHistory(entry.id)
+    })
+
+    li.appendChild(label)
+    li.appendChild(deleteBtn)
+    historyList.appendChild(li)
+  })
+}
+
+function removeFromHistory(id) {
+  const history = getHistory().filter(e => e.id !== id)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+  renderHistory()
+}
+
+// Initialize history on load
+renderHistory()

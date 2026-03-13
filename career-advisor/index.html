@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Career Advisor for Students</title>
   <meta name="description" content="Get personalized career recommendations, salary estimates, skills to learn, and a 6-month learning roadmap powered by AI.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +28,7 @@
     </header>
 
     <main>
-      <!-- Action Panel — Input Form -->
+      <!-- Action Panel -->
       <section class="action-panel" id="action-panel">
         <div class="card">
           <h2>Tell Us About Yourself</h2>
@@ -95,6 +96,12 @@
             <span class="btn-icon">✨</span> Generate Career Report
           </button>
         </div>
+
+        <!-- Report History -->
+        <div class="history-section" id="history-section" style="display:none;">
+          <h3>📂 Past Reports</h3>
+          <ul class="history-list" id="history-list"></ul>
+        </div>
       </section>
 
       <!-- Loading Panel -->
@@ -102,7 +109,7 @@
         <div class="loader-card">
           <div class="spinner"></div>
           <p id="loading-message">Analyzing your profile...</p>
-          <p class="loading-sub">Our AI is crafting your personalized career roadmap</p>
+          <p class="loading-sub" id="loading-sub">Our AI is crafting your personalized career roadmap</p>
         </div>
       </section>
 
@@ -111,9 +118,14 @@
         <div class="report-card" id="report-content">
           <!-- AI report rendered here -->
         </div>
-        <button class="start-over-btn" id="start-over-btn" type="button">
-          ↩ Start Over
-        </button>
+        <div class="report-actions">
+          <button class="action-btn" id="start-over-btn" type="button">
+            ↩ Start Over
+          </button>
+          <button class="action-btn action-btn--primary" id="download-btn" type="button">
+            📄 Download PDF
+          </button>
+        </div>
       </section>
     </main>
 
